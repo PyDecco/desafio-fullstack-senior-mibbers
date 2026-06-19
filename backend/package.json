@@ -31,7 +31,9 @@
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node",
-    "setupFiles": ["reflect-metadata"]
+    "setupFiles": [
+      "reflect-metadata"
+    ]
   },
   "dependencies": {
     "@nestjs/common": "^11.1.27",
@@ -44,6 +46,7 @@
   },
   "devDependencies": {
     "@nestjs/testing": "^11.1.27",
+    "@types/express": "^5.0.6",
     "@types/jest": "^30.0.0",
     "@types/node": "^25.9.3",
     "@types/supertest": "^7.2.0",
