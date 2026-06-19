@@ -144,5 +144,17 @@ describe('POST /coupons/validate (e2e)', () => {
     it('couponCode com caractere fora do charset', async () => {
       await post({ couponCode: 'LANC-10', cart: { items: [item(19900, 1)] } }).expect(422);
     });
+
+    it('unitPriceCents acima do teto retorna 422 (nao 500)', async () => {
+      await post({ couponCode: 'LANC10', cart: { items: [item(1e20, 1)] } }).expect(422);
+    });
+
+    it('quantity acima do teto retorna 422', async () => {
+      await post({ couponCode: 'LANC10', cart: { items: [item(100, 1_000_000_000)] } }).expect(422);
+    });
+
+    it('couponCode acima do tamanho maximo retorna 422', async () => {
+      await post({ couponCode: 'A'.repeat(100), cart: { items: [item(19900, 1)] } }).expect(422);
+    });
   });
 });
