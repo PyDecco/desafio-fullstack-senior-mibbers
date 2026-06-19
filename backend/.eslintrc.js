@@ -38,17 +38,16 @@ module.exports = {
   },
   overrides: [
     {
-      // core/ports/usecase sao puros: sem framework nem libs de validacao HTTP.
-      files: ['src/core/**/*.ts', 'src/ports/**/*.ts', 'src/usecase/**/*.ts'],
+      files: ['src/core/**/*.ts', 'src/ports/**/*.ts'],
       rules: {
         'no-restricted-imports': [
           'error',
           {
             patterns: [
-              { group: ['@nestjs/*', '@nestjs'], message: 'core/ports/usecase nao importam @nestjs/*.' },
+              { group: ['@nestjs/*', '@nestjs'], message: 'core/ports nao importam @nestjs/*.' },
               {
                 group: ['class-validator', 'class-transformer'],
-                message: 'core/ports/usecase nao importam libs de validacao HTTP.',
+                message: 'core/ports nao importam libs de validacao HTTP.',
               },
             ],
           },
@@ -56,7 +55,22 @@ module.exports = {
       },
     },
     {
-      // testes podem importar utilitarios livremente.
+      files: ['src/usecase/**/*.ts'],
+      rules: {
+        'no-restricted-imports': [
+          'error',
+          {
+            patterns: [
+              {
+                group: ['class-validator', 'class-transformer'],
+                message: 'usecase nao importa libs de validacao HTTP.',
+              },
+            ],
+          },
+        ],
+      },
+    },
+    {
       files: ['**/*.spec.ts', '**/*.e2e-spec.ts'],
       rules: { '@typescript-eslint/no-explicit-any': 'off' },
     },

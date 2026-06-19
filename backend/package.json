@@ -30,7 +30,8 @@
       "!main.ts"
     ],
     "coverageDirectory": "../coverage",
-    "testEnvironment": "node"
+    "testEnvironment": "node",
+    "setupFiles": ["reflect-metadata"]
   },
   "dependencies": {
     "@nestjs/common": "^11.1.27",
