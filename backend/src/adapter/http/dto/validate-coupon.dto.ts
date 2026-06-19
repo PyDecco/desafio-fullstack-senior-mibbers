@@ -1,10 +1,11 @@
 import { Type } from 'class-transformer';
-import { IsNotEmpty, IsString, ValidateNested } from 'class-validator';
+import { IsNotEmpty, IsString, MaxLength, ValidateNested } from 'class-validator';
 import { CartDto } from './cart.dto';
 
 export class ValidateCouponDto {
   @IsString()
   @IsNotEmpty()
+  @MaxLength(64)
   couponCode!: string;
 
   @ValidateNested()
