@@ -1,11 +1,11 @@
 # Requisitos Funcionais e Critérios de Aceite — Cupom de desconto
 
-> Base para o desenvolvimento em **TDD**. Cada critério de aceite (AC) abaixo vira ao menos um teste (unit ou e2e) — ver mapeamento em [ARQUITETURA.md §18](ARQUITETURA.md). Notação dos AC: **Dado / Quando / Então**.
+> Base para o desenvolvimento em **TDD**. Cada critério de aceite (AC) abaixo vira ao menos um teste (unit ou e2e) — ver mapeamento em [ARQUITETURA.md §8](ARQUITETURA.md). Notação dos AC: **Dado / Quando / Então**.
 
 ## Convenções
 
 - **Dinheiro**: sempre inteiro em **centavos** (`Cents`). Nunca float.
-- **`validate` ≠ `redeem`**: `validate` é *preview* read-only (não consome uso); `redeem` consome 1 uso, é idempotente e atômico.
+- **`validate` é read-only**: preview que não consome uso. O limite de usos é checado na própria validação (`redemptionCount < maxRedemptions`); não há endpoint de resgate (fora de escopo).
 - **Negócio negou ≠ request quebrado**: rejeição de negócio em `validate` → **200** `{valid:false}`; request malformado → **422** (`ValidationPipe`).
 - **`RejectionReason`** (conjunto fechado): `COUPON_NOT_FOUND | COUPON_INACTIVE | COUPON_NOT_STARTED | COUPON_EXPIRED | REDEMPTION_LIMIT_REACHED | MINIMUM_NOT_MET`.
 
@@ -15,7 +15,7 @@
 
 ### Validação (`POST /coupons/validate`, read-only)
 - **RF-V1** `evaluateCoupon(coupon, { now, subtotalCents })` é função pura; aplica as verificações em ordem **fail-fast** e retorna o **1º** motivo.
-- **RF-V2** Read-only: nunca incrementa `redemptionCount` nem grava `Redemption`.
+- **RF-V2** Read-only: nunca incrementa `redemptionCount` (é só preview).
 - **RF-V3** Subtotal **recomputado no servidor** a partir de `items`; `totalCents` do cliente, se enviado, deve bater (senão 422) e nunca é confiado.
 - **RF-V4** Qualquer desfecho de negócio (válido/inválido) responde **200**; 422 é exclusivo de falha do `ValidationPipe`.
 - **RF-V5** Shape 200-válido: `{ valid:true, couponCode, discountType, subtotalCents, discountCents, finalCents }` (sem `reason`/`message`/`missingCents`).
@@ -29,14 +29,6 @@
 - **RF-C2** Teto: `capped = cap==null ? raw : min(raw, cap)`. Clamp: `discount = min(max(capped,0), subtotal)`; `final = subtotal - discount`.
 - **RF-C3** Invariante `discount + final === subtotal`; `0 <= discount <= subtotal`; resultados inteiros.
 - **RF-C4** Asserts de entrada (falha alto): `subtotal` int `>=0`; `PERCENTAGE` 1..100; `FIXED` `>0`; `cap` null|`>=0`; overflow via `Number.isSafeInteger` (inclui produto intermediário).
-
-### Resgate (`POST /coupons/redeem`, consome 1 uso)
-- **RF-R1** Reavalia com a **mesma** `evaluateCoupon`; se inválido, rejeita **sem escrita parcial**.
-- **RF-R2** `Idempotency-Key` **obrigatório** (header) → ausente/vazio = 422; exclusivo do `/redeem`.
-- **RF-R3** Atomicidade via `tryRedeem` (porta): seção crítica síncrona; `kind` ∈ `redeemed|replayed|key_reused|limit_reached`.
-- **RF-R4** Idempotência: replay (mesma key+fingerprint) retorna o **snapshot** gravado, sem recalcular; key reusada com payload diferente → `key_reused` (409).
-- **RF-R5** Invariantes: `redemptionCount` nunca `> maxRedemptions`; `redemptionCount == COUNT(redemptions)`.
-- **RF-R6** Status: 201 (novo) · 200 (replay) · 409 (rejeição de negócio / limite / key reused) · 422 (malformado/sem key).
 
 ### Entrada, normalização e invariantes
 - **RF-I1** DTO `class-validator` **strict**: `unitPriceCents` int `>=0`; `quantity` int `>=1`; `items` `>=1` e `<=200`; rejeita chaves desconhecidas; `couponCode` não-vazio.
@@ -117,21 +109,6 @@
 - **AC-P1..6** Aceita bordas inclusivas (`PERCENTAGE` 1 e 100; `FIXED` 1; `maxRedemptions` null e 1; `startsAt==expiresAt`); rejeita `PERCENTAGE` fora 1..100, `FIXED<=0`, `cap<0`, `startsAt>expiresAt`.
 - **AC-P7** Seed falha-alto se algum cupom semeado for malformado.
 
-### 2.9 Resgate, idempotência e concorrência
-- **AC-R1** Resgate novo válido → 201 `{ redeemed:true, redemptionId, subtotalCents, discountCents, finalCents }`; `redemptionCount` +1; grava `Redemption`.
-- **AC-R2** Replay (mesma `Idempotency-Key` + mesmo payload) → 200 com o **snapshot** gravado, sem incrementar de novo.
-- **AC-R3** Mesma `Idempotency-Key` + payload diferente → 409 `IDEMPOTENCY_KEY_REUSED`.
-- **AC-R4** Limite estourado em corrida → 409 `REDEMPTION_LIMIT_REACHED`.
-- **AC-R5** Cupom expira/desativa/enche **entre** validate e redeem → 409 com o `reason`, **sem** escrita parcial.
-- **AC-R6** Replay **não** reavalia (retorna snapshot mesmo se o cupom expirou depois).
-- **AC-R7** Concorrência: `Promise.all` de `N+1` resgates → exatamente `N` `redeemed` + 1 `limit_reached`.
-- **AC-R8** Invariante pós-concorrência: `redemptionCount == COUNT(redemptions)` e nunca `> maxRedemptions`.
-- **AC-R9** `POST /coupons/redeem` sem `Idempotency-Key` → 422.
-- **AC-R10** `POST /coupons/validate` **sem** `Idempotency-Key` → 200 (header é exclusivo do redeem).
-
-### 2.10 Paridade validate/redeem
-- **AC-PAR** Mesmo cupom + carrinho + clock produzem o **mesmo veredito de negócio** em `validate` e `redeem` (prova reuso de `evaluateCoupon`).
-
 ---
 
 ## 3. Cupons de seed (cobrem a matriz)
@@ -153,4 +130,4 @@
 
 ## 4. Fora de escopo (assumido)
 
-Auth/multi-tenant, CRUD admin, empilhar cupons, limite por usuário, pagamento real, i18n/multimoeda, concorrência distribuída (in-memory single-process; transação SQLite é o caminho de produção), rate limiting/anti-enumeração. Ver [ARQUITETURA.md §13](ARQUITETURA.md).
+Auth/multi-tenant, painel admin / criação de cupom, resgate (consumo de uso) e pagamento, empilhar cupons, limite por usuário, i18n/multimoeda, concorrência distribuída (in-memory single-process; transação SQLite é o caminho de produção), rate limiting/anti-enumeração. Ver [ARQUITETURA.md §9](ARQUITETURA.md).
