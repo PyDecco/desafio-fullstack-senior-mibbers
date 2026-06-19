@@ -192,7 +192,7 @@ retorna: { subtotalCents, discountCents, finalCents }  // invariante: discount +
 
 ## 7. Pipeline de validação (`evaluateCoupon` puro, orquestrado pelo usecase)
 
-Bem-formação do carrinho é do **`ValidationPipe`/DTO (422)** — por isso `INVALID_CART` **não** é motivo de negócio. Quando o pipeline roda, `subtotalCents` já é confiável (> 0).
+Bem-formação do carrinho é do **`ValidationPipe`/DTO (422)** — por isso `INVALID_CART` **não** é motivo de negócio. Quando o pipeline roda, `subtotalCents` já é confiável (`>= 0`): um carrinho de itens **bem-formados** com subtotal 0 (itens de preço 0) é desfecho de negócio **válido** (desconto 0, final 0); só estrutura malformada (items vazio, cents negativo/float, `quantity<1`) é 422.
 
 Ordem (fail-fast, retorna o 1º motivo):
 
@@ -363,7 +363,9 @@ Convenção: **negócio negou ≠ request quebrado**. `validate` é *preview nã
 | Limite de resgates atingido | `REDEMPTION_LIMIT_REACHED` |
 | Limite na corrida (#100 e #101 juntos) | `tryRedeem` atômico ⇒ exatamente N sucessos |
 | Carrinho abaixo do mínimo | `MINIMUM_NOT_MET` + `missingCents` |
-| Carrinho vazio / `subtotal=0` / cents negativo/float / `quantity<1` | **422** (`ValidationPipe`), antes do pipeline |
+| Carrinho vazio (`items=[]`) / cents negativo ou float / `quantity<1` / campos extras | **422** (`ValidationPipe`), antes do pipeline |
+| `subtotal=0` (itens bem-formados de preço 0) | desfecho de negócio **válido**: desconto 0, final 0 |
+| Limite no penúltimo slot (`redemptionCount == max-1`) | **passa** a etapa 5 (regra é `<`, não `<=`) |
 | `totalCents` do cliente ≠ itens | **422** (não confia no cliente) |
 | Desconto fixo > subtotal | `final = 0` (clamp), não negativo |
 | Percentual com teto (`maxDiscountCents`) | aplica `min(raw, teto)` |
@@ -419,3 +421,102 @@ App `web/` (Next.js App Router): tela com campo de cupom + resumo do carrinho qu
    - `redeem` `FULL` → `409 REDEMPTION_LIMIT_REACHED`; replay com mesma `Idempotency-Key` → mesmo corpo.
 3. `npm run lint` → regra de fronteira de imports passa (`core`/`ports`/`usecase` não importam `@nestjs/*`/`class-validator`).
 4. (passo frontend) `web` consumindo o backend, fluxo ponta-a-ponta no navegador.
+
+---
+
+## 16. Requisitos Funcionais (RF)
+
+> Derivados e verificados adversarialmente. A lista enumerada completa (RF + Gherkin) será materializada em `docs/REQUISITOS.md` na execução; abaixo, o consolidado por capacidade.
+
+**Validação (`POST /coupons/validate`, read-only)**
+- RF-V1 `evaluateCoupon(coupon, { now, subtotalCents })` é função pura; aplica as 6 verificações em ordem **fail-fast** e retorna o **1º** motivo (§7).
+- RF-V2 Read-only: nunca incrementa `redemptionCount` nem grava `Redemption`.
+- RF-V3 Subtotal **recomputado no servidor** a partir de `items`; `totalCents` do cliente, se enviado, deve bater (senão 422) e nunca é confiado.
+- RF-V4 Qualquer desfecho de negócio (válido/inválido) responde **200**; 422 é exclusivo de falha do `ValidationPipe`.
+- RF-V5 Shape 200-válido: `{ valid:true, couponCode(normalizado), discountType, subtotalCents, discountCents, finalCents }` (sem `reason`/`message`/`missingCents`/—).
+- RF-V6 Shape 200-inválido: `{ valid:false, reason, message, subtotalCents }` + `missingCents` **só** em `MINIMUM_NOT_MET`; **não** inclui `couponCode`.
+- RF-V7 `subtotalCents` é ecoado em todo desfecho que o computa (inclusive `COUPON_NOT_FOUND`).
+- RF-V8 Fronteiras temporais **inclusivas** (`now==startsAt` inicia; `now==expiresAt` ainda vale); comparação por epoch ms; campos `null` = no-op.
+- RF-V9 `RejectionReason` é conjunto fechado: `COUPON_NOT_FOUND | COUPON_INACTIVE | COUPON_NOT_STARTED | COUPON_EXPIRED | REDEMPTION_LIMIT_REACHED | MINIMUM_NOT_MET`.
+
+**Cálculo (`computeDiscount`, puro)**
+- RF-C1 `PERCENTAGE`: `raw = Math.trunc(subtotal*percent/100)` (FLOOR; mult antes de dividir). `FIXED`: `raw = discountValue`.
+- RF-C2 Teto: `capped = cap==null ? raw : min(raw,cap)`. Clamp: `discount = min(max(capped,0), subtotal)`; `final = subtotal - discount`.
+- RF-C3 Invariante `discount + final === subtotal`; `0 <= discount <= subtotal`; resultados inteiros.
+- RF-C4 Asserts de entrada (falha alto): `subtotal` int `>=0`; `PERCENTAGE` 1..100; `FIXED` `>0`; `cap` null|`>=0`; guarda de overflow `Number.isSafeInteger` (inclui produto intermediário).
+
+**Resgate (`POST /coupons/redeem`, consome 1 uso)**
+- RF-R1 Reavalia com a **mesma** `evaluateCoupon` (paridade com `/validate`); se inválido, rejeita **sem escrita parcial**.
+- RF-R2 `Idempotency-Key` **obrigatório** (header) → ausente/vazio = 422; exclusivo do `/redeem` (o `/validate` não exige).
+- RF-R3 Atomicidade via `tryRedeem` (porta): seção crítica síncrona; `kind` ∈ `redeemed|replayed|key_reused|limit_reached`.
+- RF-R4 Idempotência: replay (mesma key+fingerprint) retorna o **snapshot** gravado, sem recalcular; key reusada com payload diferente → `key_reused` (409).
+- RF-R5 Invariantes: `redemptionCount` nunca `> maxRedemptions`; `redemptionCount == COUNT(redemptions)`.
+- RF-R6 Status: 201 (novo) · 200 (replay) · 409 (rejeição de negócio / limite / key reused) · 422 (malformado/sem key).
+
+**Entrada, normalização e invariantes do cupom**
+- RF-I1 DTO `class-validator` **strict**: `unitPriceCents` int `>=0`; `quantity` int `>=1`; `items` `>=1` e `<=N`; rejeita chaves desconhecidas; `couponCode` não-vazio.
+- RF-I2 `normalizeCode`: trim + remove whitespace interno (NBSP, zero-width) + NFKC + `toUpperCase('en-US')` + charset `^[A-Z0-9]+$` + min/max; vazio/whitespace-only → 422 (não `COUPON_NOT_FOUND`).
+- RF-I3 `parseCoupon` fail-fast (protege seed/dado): `PERCENTAGE` 1..100; `FIXED` `>0`; caps null|`>=0`; `maxRedemptions` null|`>=1`; `startsAt <= expiresAt`; datas ISO com offset.
+- RF-I4 `message` é string não-vazia, **determinística por `reason`** (tabela `reason→message`); é human-readable e **não** faz parte do contrato de máquina (clientes usam `reason`).
+
+---
+
+## 17. Critérios de aceite — cobertura e decisões
+
+**Cobertura (≈200 cenários Gherkin derivados, deduplicados):** validate/pipeline (48 AC), cálculo/dinheiro (25 AC), redeem/idempotência/concorrência (~26 AC), entrada/normalização/invariantes (~25 AC). Inclui: cada `RejectionReason`; **toda a cadeia de precedência fail-fast** (pares adjacentes alcançáveis); fronteiras temporais `-1ms/==/+1ms` para `startsAt` e `expiresAt` + caso de offset por epoch; fronteiras do mínimo (`==min` qualifica, `==min-1` rejeita com `missingCents=1`) e do limite (`==max` rejeita, `==max-1` passa); FLOOR (`199@10%⇒19`, `195@10%⇒19`), teto, clamp (`FIXED>subtotal`, `100%`, sub-centavo), invariante de soma; idempotência (replay/key_reused) e concorrência (`N+1⇒N`).
+
+**Decisões fechadas a partir da revisão adversarial (resolvem conflitos/lacunas):**
+- **D1 — `subtotal=0` é válido** (não 422): itens bem-formados de preço 0 → desconto 0, final 0. Removido o "subtotal>0 garantido" e o "subtotal=0→422" das seções afetadas.
+- **D2 — precedência `NOT_STARTED` vs `EXPIRED`**: inconstruível sob `parseCoupon` (`startsAt<=expiresAt`). Testar só transições **alcançáveis**; cobrir a robustez da ordem do switch com **fixture cru** anotado "estado impossível em produção" (teste de robustez, não de negócio).
+- **D3 — suíte `core/money.ts`**: era lacuna (fundação aritmética). Vira o **passo 1** do TDD: asserts de inteiro, rejeição de float/negativo/NaN/Infinity, `isSafeInteger` no limite, soma segura que estoura.
+- **D4 — overflow do produto intermediário**: teste **unit** de `computeDiscount` (defesa do core); a borda HTTP já barra (422). Alinhar o threshold do guard de `cart` ao do produto em `discount`; **sem** e2e para esse subcaso.
+- **D5 — unit faltantes do lado validate**: adicionar `ValidateCouponUseCase` (fakeRepo+fakeClock) e mapper `toValidateResponse` (shape válido/inválido) — tirar regras de shape da dependência de e2e.
+- **D6 — dedup e2e**: consolidar `ValidationPipe`/normalização numa **única** suíte e reaproveitá-la no `/redeem` via teste parametrizado.
+- **D7 — shapes travados**: 200-inválido **não** contém `couponCode`; `/validate` responde 200 **sem** `Idempotency-Key`.
+- **D8 — paridade**: teste provando que `/redeem` usa a **mesma** `evaluateCoupon` que `/validate` (mesmo veredito de negócio).
+
+---
+
+## 18. Plano de testes (Jest + Supertest) e ordem TDD
+
+**Arquivos de teste (colocados ao lado do alvo, `*.spec.ts`; e2e em `test/*.e2e-spec.ts`):**
+
+| Alvo | Nível | Cobre |
+|---|---|---|
+| `core/money.spec.ts` | unit | guards de `Cents`, float/negativo/NaN/Infinity, `isSafeInteger`, soma segura *(D3)* |
+| `core/discount.spec.ts` | unit | percentual/fixo, FLOOR, teto, clamp, invariante de soma, asserts, overflow *(D4)* |
+| `core/normalize-code.spec.ts` | unit | trim/NBSP/zero-width/NFKC/locale/charset/len/vazio |
+| `core/coupon.spec.ts` | unit | `parseCoupon` fail-fast (bordas inclusivas + rejeições) |
+| `core/cart.spec.ts` | unit | `computeSubtotal` + guard de inteiro seguro |
+| `core/evaluate-coupon.spec.ts` | unit | pipeline, precedência alcançável, fronteiras `±1ms`, null no-op, `subtotal=0`, robustez do switch *(D2)* |
+| `usecase/validate-coupon.usecase.spec.ts` | unit | load→evaluate→compute (fakes) *(D5)* |
+| `usecase/redeem-coupon.usecase.spec.ts` | unit | reavaliação + mapeamento dos `kind`s |
+| `adapter/persistence/in-memory-coupon.repository.spec.ts` | unit | `tryRedeem` atômico, kinds, invariantes, concorrência `N+1` |
+| `adapter/persistence/seed.spec.ts` | unit | seed falha-alto em cupom malformado |
+| `adapter/http/mappers/*.spec.ts` | unit | `toCommand` (+recompute/totalCents), `result-to-http` (validate shape + redeem 201/200/409) *(D5)* |
+| `test/validate.e2e-spec.ts` | e2e | 200 válido/inválido por reason, fronteira via fake clock, read-only |
+| `test/redeem.e2e-spec.ts` | e2e | 201/200-replay/409 (limite/estado/key-reuse), concorrência, mudança de estado entre validate→redeem, paridade *(D8)* |
+| `test/validation.e2e-spec.ts` | e2e | suíte **única** de `ValidationPipe`/normalização, parametrizada p/ validate e redeem *(D6)* |
+
+**Ordem de execução TDD (dependências; cada unidade: red → green → refactor):**
+1. `core/money.ts` → 2. `core/discount.ts` → 3. `core/normalize-code.ts` → 4. `core/coupon.ts` (parseCoupon) → 5. `core/cart.ts` *(paralelo a 3/4)* → 6. `core/evaluate-coupon.ts` → 7. `usecase/validate-coupon` → 8. `usecase/redeem-coupon` → 9. `adapter/persistence/in-memory-coupon.repository` → 10. `adapter/persistence/seed` → 11. `adapter/clock/system.clock` → 12. `adapter/http` (DTO, mappers, controller, module) → 13. **e2e** (consolidando a suíte de validação).
+
+Determinismo: **fake clock** + **in-memory repo** seedado; e2e via `Test.createTestingModule` com `.overrideProvider(CLOCK | COUPON_REPOSITORY)`.
+
+---
+
+## 19. Estratégia de commits (TDD estrito — Red→Green visível)
+
+Histórico que **prova** o TDD: para cada unidade da ordem do §18, primeiro o commit do teste falhando, depois o da implementação que o torna verde. Conventional commits; cada commit com o trailer `Co-Authored-By`.
+
+**Sequência (sobre o repo já existente `PyDecco/desafio-fullstack-senior-mibbers`):**
+1. `docs(backend): requisitos funcionais e criterios de aceite` — cria `docs/REQUISITOS.md` (RF + Gherkin completos).
+2. `chore(backend): scaffold NestJS + Jest + ESLint (regra de fronteira de imports)` — tooling: `package.json`, `tsconfig`, `nest-cli.json`, config do Jest, e a regra `no-restricted-imports`/`dependency-cruiser` (`core`/`ports`/`usecase` não importam `@nestjs/*`/`class-validator`).
+3. **Por unidade (passos 1→13 do §18), o par Red→Green:**
+   - `test(<escopo>): specs de <unidade> (red)` — commit com os testes **falhando** (intencional).
+   - `feat(<escopo>): <unidade> (green)` — implementação mínima que torna os testes verdes.
+   - `refactor(<escopo>): ...` — quando houver limpeza, mantendo verde.
+
+Escopos: `money`, `discount`, `normalize`, `coupon`, `cart`, `evaluate`, `validate-uc`, `redeem-uc`, `repo`, `seed`, `clock`, `http`, `e2e`.
+
+**Convenções:** commits vermelhos são **intencionais** (provam o ciclo) — registrado no README. Cada par deixa claro o "antes/depois". Push incremental ao `origin/main`. A suíte só fica 100% verde no fim de cada par (green) e ao término do passo 13.
