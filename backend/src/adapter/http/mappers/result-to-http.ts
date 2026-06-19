@@ -1,5 +1,18 @@
 import { RejectionCode } from '../../../core/models/rejection.model';
+import type { DiscountType } from '../../../core/models/discount.model';
 import type { ValidationOutcome } from '../../../core/models/validate-coupon.model';
+
+export type ValidateCouponResponse =
+  | {
+      valid: true;
+      couponCode: string;
+      discountType: DiscountType;
+      subtotalCents: number;
+      discountCents: number;
+      finalCents: number;
+    }
+  | { valid: false; reason: Exclude<RejectionCode, RejectionCode.MinimumNotMet>; message: string; subtotalCents: number }
+  | { valid: false; reason: RejectionCode.MinimumNotMet; message: string; subtotalCents: number; missingCents: number };
 
 const MESSAGES: Record<RejectionCode, string> = {
   [RejectionCode.NotFound]: 'Cupom nao encontrado.',
@@ -10,7 +23,7 @@ const MESSAGES: Record<RejectionCode, string> = {
   [RejectionCode.MinimumNotMet]: 'Valor minimo de compra nao atingido.',
 };
 
-export function toValidateResponse(outcome: ValidationOutcome) {
+export function toValidateResponse(outcome: ValidationOutcome): ValidateCouponResponse {
   if (outcome.valid) {
     return {
       valid: true,
@@ -22,11 +35,15 @@ export function toValidateResponse(outcome: ValidationOutcome) {
     };
   }
 
-  return {
-    valid: false,
-    reason: outcome.reason,
-    message: MESSAGES[outcome.reason],
-    subtotalCents: outcome.subtotalCents,
-    ...(outcome.missingCents !== null ? { missingCents: outcome.missingCents } : {}),
-  };
+  if (outcome.reason === RejectionCode.MinimumNotMet) {
+    return {
+      valid: false,
+      reason: outcome.reason,
+      message: MESSAGES[outcome.reason],
+      subtotalCents: outcome.subtotalCents,
+      missingCents: outcome.missingCents,
+    };
+  }
+
+  return { valid: false, reason: outcome.reason, message: MESSAGES[outcome.reason], subtotalCents: outcome.subtotalCents };
 }

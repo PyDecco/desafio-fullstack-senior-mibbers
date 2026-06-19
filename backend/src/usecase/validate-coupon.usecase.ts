@@ -20,7 +20,7 @@ export class ValidateCouponUseCase {
     const coupon = await this.repo.findByCode(code);
 
     if (coupon === null) {
-      return { valid: false, reason: RejectionCode.NotFound, subtotalCents, missingCents: null };
+      return { valid: false, reason: RejectionCode.NotFound, subtotalCents };
     }
 
     const result = evaluateCoupon(coupon, { now: this.clock.now(), subtotalCents });
@@ -35,8 +35,9 @@ export class ValidateCouponUseCase {
       };
     }
 
-    const missingCents =
-      result.rejection.reason === RejectionCode.MinimumNotMet ? result.rejection.missingCents : null;
-    return { valid: false, reason: result.rejection.reason, subtotalCents, missingCents };
+    if (result.rejection.reason === RejectionCode.MinimumNotMet) {
+      return { valid: false, reason: result.rejection.reason, subtotalCents, missingCents: result.rejection.missingCents };
+    }
+    return { valid: false, reason: result.rejection.reason, subtotalCents };
   }
 }

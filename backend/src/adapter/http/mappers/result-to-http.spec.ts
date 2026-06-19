@@ -1,6 +1,12 @@
 import { toValidateResponse } from './result-to-http';
 import { DiscountType } from '../../../core/models/discount.model';
 import { RejectionCode } from '../../../core/models/rejection.model';
+import type { ValidationOutcome } from '../../../core/models/validate-coupon.model';
+
+const invalidOutcome = (reason: RejectionCode): ValidationOutcome =>
+  reason === RejectionCode.MinimumNotMet
+    ? { valid: false, reason, subtotalCents: 0, missingCents: 1 }
+    : { valid: false, reason, subtotalCents: 0 };
 
 describe('adapter/http/mappers/result-to-http', () => {
   it('formata sucesso sem reason/message/missingCents', () => {
@@ -24,7 +30,7 @@ describe('adapter/http/mappers/result-to-http', () => {
   });
 
   it('formata rejeicao com reason, message e subtotal, sem missingCents', () => {
-    const body = toValidateResponse({ valid: false, reason: RejectionCode.Expired, subtotalCents: 19900, missingCents: null });
+    const body = toValidateResponse({ valid: false, reason: RejectionCode.Expired, subtotalCents: 19900 });
     expect(body).toEqual({ valid: false, reason: RejectionCode.Expired, message: expect.any(String), subtotalCents: 19900 });
     expect(body).not.toHaveProperty('missingCents');
   });
@@ -36,7 +42,7 @@ describe('adapter/http/mappers/result-to-http', () => {
 
   it('message e string nao-vazia para cada reason', () => {
     for (const reason of Object.values(RejectionCode)) {
-      const body = toValidateResponse({ valid: false, reason, subtotalCents: 0, missingCents: null });
+      const body = toValidateResponse(invalidOutcome(reason));
       expect((body as { message: string }).message.length).toBeGreaterThan(0);
     }
   });

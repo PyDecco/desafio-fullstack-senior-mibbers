@@ -17,4 +17,5 @@ export type ValidationOutcome =
       discountCents: Cents;
       finalCents: Cents;
     }
-  | { valid: false; reason: RejectionCode; subtotalCents: Cents; missingCents: number | null };
+  | { valid: false; reason: Exclude<RejectionCode, RejectionCode.MinimumNotMet>; subtotalCents: Cents }
+  | { valid: false; reason: RejectionCode.MinimumNotMet; subtotalCents: Cents; missingCents: number };

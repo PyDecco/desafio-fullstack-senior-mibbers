@@ -43,7 +43,6 @@ describe('usecase/validate-coupon', () => {
       valid: false,
       reason: RejectionCode.NotFound,
       subtotalCents: 19900,
-      missingCents: null,
     });
   });
 
@@ -73,7 +72,7 @@ describe('usecase/validate-coupon', () => {
       couponCode: 'EXP',
       items: [item(19900, 1)],
     });
-    expect(out).toEqual({ valid: false, reason: RejectionCode.Expired, subtotalCents: 19900, missingCents: null });
+    expect(out).toEqual({ valid: false, reason: RejectionCode.Expired, subtotalCents: 19900 });
   });
 
   it('cupom nao iniciado retorna COUPON_NOT_STARTED usando o clock injetado', async () => {
