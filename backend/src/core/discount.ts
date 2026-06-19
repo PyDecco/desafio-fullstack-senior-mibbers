@@ -1,55 +1,32 @@
-import { assertCents, mulCents, type Cents } from './money';
+import { assertCents, mulCents } from './money';
+import { DiscountType, type DiscountInput, type Breakdown } from './models/discount.model';
 
-export type DiscountType = 'PERCENTAGE' | 'FIXED';
-
-/** Subconjunto do cupom necessário ao cálculo (o `Coupon` completo o satisfaz). */
-export interface DiscountInput {
-  discountType: DiscountType;
-  discountValue: number; // PERCENTAGE: 1..100 | FIXED: centavos (>0)
-  maxDiscountCents: number | null;
-}
-
-export interface Breakdown {
-  subtotalCents: Cents;
-  discountCents: Cents;
-  finalCents: Cents;
-}
-
-/**
- * Calcula o desconto de forma pura. Não-negatividade e teto garantidos por
- * construção (clamp), não por confiança no input. Arredondamento = FLOOR
- * (Math.trunc): o desconto nunca excede o percentual nominal.
- */
 export function computeDiscount(input: DiscountInput, subtotalCents: number): Breakdown {
-  assertCents(subtotalCents, 'subtotal');
+  assertCents(subtotalCents);
   assertDiscountInput(input);
 
   const raw =
-    input.discountType === 'PERCENTAGE'
-      ? Math.trunc(mulCents(subtotalCents, input.discountValue) / 100) // mult antes de dividir; guarda overflow
+    input.discountType === DiscountType.Percentage
+      ? Math.trunc(mulCents(subtotalCents, input.discountValue) / 100)
       : input.discountValue;
 
-  const capped = input.maxDiscountCents == null ? raw : Math.min(raw, input.maxDiscountCents);
-  const discountCents = Math.min(Math.max(capped, 0), subtotalCents); // clamp [0, subtotal]
-  const finalCents = subtotalCents - discountCents;
+  const capped = input.maxDiscountCents === null ? raw : Math.min(raw, input.maxDiscountCents);
+  const discountCents = Math.min(Math.max(capped, 0), subtotalCents);
 
-  return { subtotalCents, discountCents, finalCents };
+  return { subtotalCents, discountCents, finalCents: subtotalCents - discountCents };
 }
 
-function assertDiscountInput(input: DiscountInput): void {
-  const { discountType, discountValue, maxDiscountCents } = input;
-
+function assertDiscountInput({ discountType, discountValue, maxDiscountCents }: DiscountInput): void {
   if (!Number.isInteger(discountValue)) {
-    throw new RangeError(`discountValue deve ser inteiro; recebido: ${String(discountValue)}`);
+    throw new RangeError(`discountValue invalido: ${discountValue}`);
   }
-  if (discountType === 'PERCENTAGE') {
-    if (discountValue < 1 || discountValue > 100) {
-      throw new RangeError(`percentual deve estar em 1..100; recebido: ${discountValue}`);
-    }
-  } else if (discountValue <= 0) {
-    throw new RangeError(`desconto fixo deve ser > 0; recebido: ${discountValue}`);
+  if (discountType === DiscountType.Percentage && (discountValue < 1 || discountValue > 100)) {
+    throw new RangeError(`percentual fora de 1..100: ${discountValue}`);
+  }
+  if (discountType === DiscountType.Fixed && discountValue <= 0) {
+    throw new RangeError(`fixo deve ser > 0: ${discountValue}`);
   }
   if (maxDiscountCents !== null) {
-    assertCents(maxDiscountCents, 'maxDiscountCents');
+    assertCents(maxDiscountCents);
   }
 }

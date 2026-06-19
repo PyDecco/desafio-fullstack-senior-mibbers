@@ -1,13 +1,14 @@
-import { computeDiscount, DiscountInput } from './discount';
+import { computeDiscount } from './discount';
+import { DiscountType, type DiscountInput } from './models/discount.model';
 
 const percentage = (discountValue: number, maxDiscountCents: number | null = null): DiscountInput => ({
-  discountType: 'PERCENTAGE',
+  discountType: DiscountType.Percentage,
   discountValue,
   maxDiscountCents,
 });
 
 const fixed = (discountValue: number): DiscountInput => ({
-  discountType: 'FIXED',
+  discountType: DiscountType.Fixed,
   discountValue,
   maxDiscountCents: null,
 });
