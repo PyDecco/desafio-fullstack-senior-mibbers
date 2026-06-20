@@ -56,6 +56,16 @@ curl -X POST localhost:3001/coupons/validate -H 'Content-Type: application/json'
 # => {"valid":true,"couponCode":"LANC10","discountType":"PERCENTAGE","subtotalCents":19900,"discountCents":1990,"finalCents":17910}
 ```
 
+### Documentação interativa (Swagger)
+
+Com a API no ar, a documentação OpenAPI fica disponível em:
+
+- **Swagger UI**: <http://localhost:3001/docs> — o *Try it out* funciona direto contra os cupons de seed abaixo.
+- **OpenAPI JSON**: <http://localhost:3001/docs-json>
+- **OpenAPI YAML**: <http://localhost:3001/docs-yaml>
+
+A resposta `200` é documentada como `oneOf` das três variantes (válido / rejeição / mínimo não atingido) com exemplos reais, e o `422` traz um exemplo por caminho de erro. Para desligar a documentação (ex.: produção), defina `SWAGGER_ENABLED=false`.
+
 ### Cupons de seed (para testar cada caso)
 
 | Code | Regra | Demonstra |
