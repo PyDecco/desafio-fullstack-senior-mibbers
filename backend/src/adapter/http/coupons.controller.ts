@@ -1,5 +1,6 @@
 import { Body, Controller, HttpCode, Post, UseFilters } from '@nestjs/common';
 import { ValidateCouponUseCase } from '../../usecase/validate-coupon.usecase';
+import { ApiValidateCoupon } from './docs/swagger';
 import { ValidateCouponDto } from './dto/validate-coupon.dto';
 import { InvalidCouponCodeFilter } from './invalid-coupon-code.filter';
 import { toValidateCommand } from './mappers/to-command';
@@ -12,6 +13,7 @@ export class CouponsController {
 
   @Post('validate')
   @HttpCode(200)
+  @ApiValidateCoupon()
   async validate(@Body() dto: ValidateCouponDto): Promise<ValidateCouponResponse> {
     const outcome = await this.validateCoupon.execute(toValidateCommand(dto));
     return toValidateResponse(outcome);
