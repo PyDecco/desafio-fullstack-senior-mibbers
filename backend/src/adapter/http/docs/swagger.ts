@@ -5,7 +5,6 @@ import {
   ApiExtraModels,
   ApiOkResponse,
   ApiOperation,
-  ApiTags,
   ApiUnprocessableEntityResponse,
   DocumentBuilder,
   getSchemaPath,
@@ -88,7 +87,6 @@ export function setupSwagger(app: INestApplication): OpenAPIObject | undefined {
 
 export function ApiValidateCoupon(): ReturnType<typeof applyDecorators> {
   return applyDecorators(
-    ApiTags('coupons'),
     ApiExtraModels(CouponAcceptedResponse, CouponRejectedResponse, CouponMinimumNotMetResponse, ValidationErrorResponse),
     ApiOperation({
       summary: 'Valida um cupom contra um carrinho (somente leitura)',
