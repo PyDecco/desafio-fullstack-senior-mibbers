@@ -1,13 +1,15 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsInt, IsString, Max, Min } from 'class-validator';
+import { IsInt, IsString, Max, MaxLength, Min } from 'class-validator';
 
 export class CartItemDto {
-  @ApiProperty({ example: 'sku-1', description: 'Identificador do item' })
+  @ApiProperty({ maxLength: 128, example: 'sku-1', description: 'Identificador do item' })
   @IsString()
+  @MaxLength(128)
   id!: string;
 
-  @ApiProperty({ example: 'Camiseta', description: 'Nome do item' })
+  @ApiProperty({ maxLength: 256, example: 'Camiseta', description: 'Nome do item' })
   @IsString()
+  @MaxLength(256)
   name!: string;
 
   @ApiProperty({ type: 'integer', minimum: 0, maximum: 100_000_000, example: 19900, description: 'Preco unitario em centavos' })

@@ -2,6 +2,9 @@ import type { INestApplication } from '@nestjs/common';
 import { SwaggerModule, type OpenAPIObject } from '@nestjs/swagger';
 import { Test } from '@nestjs/testing';
 import { AppModule } from '../../../app.module';
+import { RejectionCode } from '../../../core/models/rejection.model';
+import type { ValidateCouponResponse } from '../mappers/result-to-http';
+import { CouponAcceptedResponse, CouponMinimumNotMetResponse, CouponRejectedResponse } from './response.schemas';
 import { buildOpenApiConfig } from './swagger';
 
 describe('Documento OpenAPI', () => {
@@ -52,19 +55,32 @@ describe('Documento OpenAPI', () => {
     expect(Object.keys(errJson().examples).length).toBeGreaterThan(3);
   });
 
-  it('gera componentes nomeados para os enums de dominio', () => {
+  it('gera componentes nomeados e mantem as variantes de rejeicao disjuntas', () => {
     expect(schemas().DiscountType.enum).toEqual(['PERCENTAGE', 'FIXED']);
-    expect(schemas().RejectionCode.enum).toHaveLength(6);
-    expect(schemas().RejectionCode.enum).toEqual(
+    expect(schemas().RejectionReason.enum).toHaveLength(5);
+    expect(schemas().RejectionReason.enum).not.toContain('MINIMUM_NOT_MET');
+    expect(schemas().RejectionReason.enum).toEqual(
       expect.arrayContaining([
         'COUPON_NOT_FOUND',
         'COUPON_INACTIVE',
         'COUPON_NOT_STARTED',
         'COUPON_EXPIRED',
         'REDEMPTION_LIMIT_REACHED',
-        'MINIMUM_NOT_MET',
       ]),
     );
+    expect(schemas().CouponMinimumNotMetResponse.properties.reason.enum).toEqual(['MINIMUM_NOT_MET']);
+  });
+
+  it('classes documentais permanecem alinhadas ao contrato de runtime', () => {
+    type Accepted = Extract<ValidateCouponResponse, { valid: true }>;
+    type MinimumNotMet = Extract<ValidateCouponResponse, { reason: RejectionCode.MinimumNotMet }>;
+    type SimpleRejected = Exclude<ValidateCouponResponse, Accepted | MinimumNotMet>;
+
+    const accepted: CouponAcceptedResponse = {} as Accepted;
+    const rejected: CouponRejectedResponse = {} as SimpleRejected;
+    const minimum: CouponMinimumNotMetResponse = {} as MinimumNotMet;
+
+    expect([accepted, rejected, minimum]).toHaveLength(3);
   });
 
   it('espelha as constraints dos DTOs no schema', () => {

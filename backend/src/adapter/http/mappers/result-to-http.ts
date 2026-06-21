@@ -14,7 +14,7 @@ export type ValidateCouponResponse =
   | { valid: false; reason: Exclude<RejectionCode, RejectionCode.MinimumNotMet>; message: string; subtotalCents: number }
   | { valid: false; reason: RejectionCode.MinimumNotMet; message: string; subtotalCents: number; missingCents: number };
 
-const MESSAGES: Record<RejectionCode, string> = {
+export const MESSAGES: Record<RejectionCode, string> = {
   [RejectionCode.NotFound]: 'Cupom nao encontrado.',
   [RejectionCode.Inactive]: 'Cupom inativo.',
   [RejectionCode.NotStarted]: 'Cupom ainda nao esta valido.',

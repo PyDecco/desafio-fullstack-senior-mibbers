@@ -1,8 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { DiscountType } from '../../../core/models/discount.model';
 import { RejectionCode } from '../../../core/models/rejection.model';
+import { INVALID_COUPON_CODE_MESSAGE, TOTAL_CENTS_MISMATCH_MESSAGE } from '../error-messages';
+import { MESSAGES } from '../mappers/result-to-http';
 
 type ExampleMap = Record<string, { summary: string; value: unknown }>;
+
+const NON_MINIMUM_REASONS = Object.values(RejectionCode).filter((reason) => reason !== RejectionCode.MinimumNotMet);
 
 export class CouponAcceptedResponse {
   @ApiProperty({ enum: [true], example: true })
@@ -28,10 +32,10 @@ export class CouponRejectedResponse {
   @ApiProperty({ enum: [false], example: false })
   valid!: false;
 
-  @ApiProperty({ enum: RejectionCode, enumName: 'RejectionCode', example: RejectionCode.NotFound })
-  reason!: RejectionCode;
+  @ApiProperty({ enum: NON_MINIMUM_REASONS, enumName: 'RejectionReason', example: RejectionCode.NotFound })
+  reason!: Exclude<RejectionCode, RejectionCode.MinimumNotMet>;
 
-  @ApiProperty({ example: 'Cupom nao encontrado.' })
+  @ApiProperty({ example: MESSAGES[RejectionCode.NotFound] })
   message!: string;
 
   @ApiProperty({ type: 'integer', minimum: 0, example: 19900 })
@@ -45,7 +49,7 @@ export class CouponMinimumNotMetResponse {
   @ApiProperty({ enum: [RejectionCode.MinimumNotMet], example: RejectionCode.MinimumNotMet })
   reason!: RejectionCode.MinimumNotMet;
 
-  @ApiProperty({ example: 'Valor minimo de compra nao atingido.' })
+  @ApiProperty({ example: MESSAGES[RejectionCode.MinimumNotMet] })
   message!: string;
 
   @ApiProperty({ type: 'integer', minimum: 0, example: 1000 })
@@ -114,27 +118,27 @@ export const OK_EXAMPLES: ExampleMap = {
   },
   'nao-encontrado': {
     summary: 'Cupom inexistente',
-    value: { valid: false, reason: RejectionCode.NotFound, message: 'Cupom nao encontrado.', subtotalCents: 19900 },
+    value: { valid: false, reason: RejectionCode.NotFound, message: MESSAGES[RejectionCode.NotFound], subtotalCents: 19900 },
   },
   inativo: {
     summary: 'Cupom inativo',
-    value: { valid: false, reason: RejectionCode.Inactive, message: 'Cupom inativo.', subtotalCents: 19900 },
+    value: { valid: false, reason: RejectionCode.Inactive, message: MESSAGES[RejectionCode.Inactive], subtotalCents: 19900 },
   },
   expirado: {
     summary: 'Cupom expirado',
-    value: { valid: false, reason: RejectionCode.Expired, message: 'Cupom expirado.', subtotalCents: 19900 },
+    value: { valid: false, reason: RejectionCode.Expired, message: MESSAGES[RejectionCode.Expired], subtotalCents: 19900 },
   },
   'nao-iniciado': {
     summary: 'Cupom ainda nao iniciado',
-    value: { valid: false, reason: RejectionCode.NotStarted, message: 'Cupom ainda nao esta valido.', subtotalCents: 19900 },
+    value: { valid: false, reason: RejectionCode.NotStarted, message: MESSAGES[RejectionCode.NotStarted], subtotalCents: 19900 },
   },
   'limite-atingido': {
     summary: 'Limite de usos atingido',
-    value: { valid: false, reason: RejectionCode.LimitReached, message: 'Limite de usos do cupom atingido.', subtotalCents: 19900 },
+    value: { valid: false, reason: RejectionCode.LimitReached, message: MESSAGES[RejectionCode.LimitReached], subtotalCents: 19900 },
   },
   'minimo-nao-atingido': {
     summary: 'Abaixo do minimo (inclui missingCents)',
-    value: { valid: false, reason: RejectionCode.MinimumNotMet, message: 'Valor minimo de compra nao atingido.', subtotalCents: 1000, missingCents: 4000 },
+    value: { valid: false, reason: RejectionCode.MinimumNotMet, message: MESSAGES[RejectionCode.MinimumNotMet], subtotalCents: 1000, missingCents: 4000 },
   },
 };
 
@@ -149,6 +153,6 @@ export const ERROR_EXAMPLES: ExampleMap = {
   'campo-desconhecido': { summary: 'Campo extra no payload', value: pipeError(['property hacker should not exist']) },
   'cents-overflow': { summary: 'unitPriceCents acima do teto', value: pipeError(['cart.items.0.unitPriceCents must not be greater than 100000000']) },
   'codigo-muito-longo': { summary: 'couponCode acima de 64 caracteres', value: pipeError(['couponCode must be shorter than or equal to 64 characters']) },
-  'total-divergente': { summary: 'totalCents nao bate com os itens', value: borderError('totalCents diverge dos itens') },
-  'codigo-invalido': { summary: 'Charset invalido apos normalizacao', value: borderError('codigo de cupom invalido') },
+  'total-divergente': { summary: 'totalCents nao bate com os itens', value: borderError(TOTAL_CENTS_MISMATCH_MESSAGE) },
+  'codigo-invalido': { summary: 'Charset invalido apos normalizacao', value: borderError(INVALID_COUPON_CODE_MESSAGE) },
 };
