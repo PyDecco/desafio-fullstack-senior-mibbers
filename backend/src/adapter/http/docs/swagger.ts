@@ -31,7 +31,7 @@ const DESCRIPTION = `API de validacao de cupom de desconto (**somente leitura**)
 - **Rejeicoes de negocio retornam 200** com \`valid: false\` (cupom inexistente, inativo, expirado, etc.) — nao sao 4xx.
 - \`missingCents\` aparece **apenas** quando \`reason = MINIMUM_NOT_MET\`.
 - Dinheiro sempre em **centavos inteiros** (sem ponto flutuante).
-- \`couponCode\` e normalizado (trim, remocao de zero-width, maiusculas) e deve casar com \`^[A-Z0-9]+$\` apos normalizar, senao **422**.
+- \`couponCode\` e normalizado (trim, remocao de zero-width, maiusculas) e deve conter apenas A-Z e 0-9 apos normalizar, senao **422**.
 
 ### Cupons disponiveis (seed) para testar
 
