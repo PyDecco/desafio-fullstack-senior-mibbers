@@ -56,23 +56,25 @@ export function buildOpenApiConfig(): Omit<OpenAPIObject, 'paths'> {
     .build();
 }
 
+const DOCS_PATH = 'docs';
+
 export function setupSwagger(app: INestApplication): OpenAPIObject | undefined {
   if (process.env.SWAGGER_ENABLED === 'false') {
     return undefined;
   }
 
   app.use((req: Request, res: Response, next: NextFunction) => {
-    if (req.path === '/docs/') {
-      res.redirect('/docs');
+    if (req.path === `/${DOCS_PATH}/`) {
+      res.redirect(`/${DOCS_PATH}`);
       return;
     }
     next();
   });
 
   const document = SwaggerModule.createDocument(app, buildOpenApiConfig());
-  SwaggerModule.setup('docs', app, document, {
-    jsonDocumentUrl: 'docs-json',
-    yamlDocumentUrl: 'docs-yaml',
+  SwaggerModule.setup(DOCS_PATH, app, document, {
+    jsonDocumentUrl: `${DOCS_PATH}-json`,
+    yamlDocumentUrl: `${DOCS_PATH}-yaml`,
     customSiteTitle: 'Mibbers — API de Validacao de Cupom',
     swaggerOptions: {
       operationsSorter: 'alpha',
