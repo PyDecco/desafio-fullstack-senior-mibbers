@@ -1,0 +1,17 @@
+{
+  "name": "mibbers",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Mibbers — validacao de cupom: backend NestJS (:3001) + frontend Next.js (:3000)",
+  "workspaces": ["backend", "web"],
+  "scripts": {
+    "dev": "concurrently -n backend,web -c blue,magenta \"npm run start:dev -w backend\" \"npm run dev -w web\"",
+    "build": "npm run build -w backend && npm run build -w web",
+    "test": "npm run test -w backend && npm run test -w web",
+    "lint": "npm run lint -w backend && npm run lint -w web",
+    "typecheck": "npm run typecheck -w web"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
