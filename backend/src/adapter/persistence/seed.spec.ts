@@ -1,5 +1,5 @@
 import { seedCoupons } from './seed';
-import { DiscountType } from '../../core/models/discount.model';
+import { DiscountType } from '../../core/models';
 
 const byCode = () => new Map(seedCoupons().map((c) => [c.code, c]));
 

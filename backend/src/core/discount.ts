@@ -1,5 +1,5 @@
 import { assertCents, mulCents } from './money';
-import { DiscountType, type DiscountInput, type Breakdown } from './models/discount.model';
+import { DiscountType, type DiscountInput, type Breakdown } from './models';
 
 export function computeDiscount(input: DiscountInput, subtotalCents: number): Breakdown {
   assertCents(subtotalCents);

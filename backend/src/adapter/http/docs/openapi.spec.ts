@@ -2,9 +2,9 @@ import type { INestApplication } from '@nestjs/common';
 import { SwaggerModule, type OpenAPIObject } from '@nestjs/swagger';
 import { Test } from '@nestjs/testing';
 import { AppModule } from '../../../app.module';
-import { RejectionCode } from '../../../core/models/rejection.model';
+import { RejectionCode } from '../../../core/models';
 import type { ValidateCouponResponse } from '../mappers/result-to-http';
-import { CouponAcceptedResponse, CouponMinimumNotMetResponse, CouponRejectedResponse } from './response.schemas';
+import { CouponAcceptedResponse, CouponMinimumNotMetResponse, CouponRejectedResponse } from './swagger';
 import { buildOpenApiConfig } from './swagger';
 
 describe('Documento OpenAPI', () => {

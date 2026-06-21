@@ -1,7 +1,5 @@
 import { computeDiscount } from './discount';
-import type { Coupon } from './models/coupon.model';
-import type { EvaluationContext } from './models/evaluation.model';
-import { RejectionCode, type Rejection, type ValidationResult } from './models/rejection.model';
+import { RejectionCode, type Coupon, type EvaluationContext, type Rejection, type ValidationResult } from './models';
 
 export function evaluateCoupon(coupon: Coupon, ctx: EvaluationContext): ValidationResult {
   const rejection = firstRejection(coupon, ctx);

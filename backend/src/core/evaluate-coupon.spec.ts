@@ -1,7 +1,5 @@
 import { evaluateCoupon } from './evaluate-coupon';
-import { DiscountType } from './models/discount.model';
-import { RejectionCode } from './models/rejection.model';
-import type { Coupon } from './models/coupon.model';
+import { DiscountType, RejectionCode, type Coupon } from './models';
 
 const coupon = (over: Partial<Coupon> = {}): Coupon => ({
   id: 'c1',

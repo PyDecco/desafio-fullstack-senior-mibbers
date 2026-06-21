@@ -1,5 +1,5 @@
 import { computeSubtotal } from './cart';
-import type { CartItem } from './models/cart.model';
+import type { CartItem } from './models';
 
 const item = (unitPriceCents: number, quantity: number): CartItem => ({
   id: 'p',

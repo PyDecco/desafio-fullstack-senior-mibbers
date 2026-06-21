@@ -1,5 +1,5 @@
 import { computeDiscount } from './discount';
-import { DiscountType, type DiscountInput } from './models/discount.model';
+import { DiscountType, type DiscountInput } from './models';
 
 const percentage = (discountValue: number, maxDiscountCents: number | null = null): DiscountInput => ({
   discountType: DiscountType.Percentage,

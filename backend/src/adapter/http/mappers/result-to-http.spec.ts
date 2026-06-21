@@ -1,7 +1,5 @@
 import { toValidateResponse } from './result-to-http';
-import { DiscountType } from '../../../core/models/discount.model';
-import { RejectionCode } from '../../../core/models/rejection.model';
-import type { ValidationOutcome } from '../../../core/models/validate-coupon.model';
+import { DiscountType, RejectionCode, type ValidationOutcome } from '../../../core/models';
 
 const invalidOutcome = (reason: RejectionCode): ValidationOutcome =>
   reason === RejectionCode.MinimumNotMet

@@ -1,6 +1,5 @@
 import { parseCoupon } from '../../core/coupon';
-import { DiscountType } from '../../core/models/discount.model';
-import type { Coupon } from '../../core/models/coupon.model';
+import { DiscountType, type Coupon } from '../../core/models';
 
 const CREATED_AT = '2026-01-01T00:00:00Z';
 const PAST = '2020-01-01T00:00:00Z';

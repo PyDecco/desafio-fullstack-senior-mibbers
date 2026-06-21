@@ -1,4 +1,4 @@
-import type { Coupon } from '../../core/models/coupon.model';
+import type { Coupon } from '../../core/models';
 import type { CouponRepository } from '../../ports/coupon-repository';
 
 export class InMemoryCouponRepository implements CouponRepository {

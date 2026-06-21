@@ -2,8 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { computeSubtotal } from '../core/cart';
 import { evaluateCoupon } from '../core/evaluate-coupon';
 import { normalizeCode } from '../core/normalize-code';
-import { RejectionCode } from '../core/models/rejection.model';
-import type { ValidateCouponCommand, ValidationOutcome } from '../core/models/validate-coupon.model';
+import { RejectionCode, type ValidateCouponCommand, type ValidationOutcome } from '../core/models';
 import { COUPON_REPOSITORY, type CouponRepository } from '../ports/coupon-repository';
 import { CLOCK, type Clock } from '../ports/clock';
 

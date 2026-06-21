@@ -1,6 +1,6 @@
 import { UnprocessableEntityException } from '@nestjs/common';
 import { computeSubtotal } from '../../../core/cart';
-import type { ValidateCouponCommand } from '../../../core/models/validate-coupon.model';
+import type { ValidateCouponCommand } from '../../../core/models';
 import { TOTAL_CENTS_MISMATCH_MESSAGE } from '../error-messages';
 import type { ValidateCouponDto } from '../dto/validate-coupon.dto';
 

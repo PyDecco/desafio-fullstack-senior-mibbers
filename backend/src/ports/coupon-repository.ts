@@ -1,4 +1,4 @@
-import type { Coupon } from '../core/models/coupon.model';
+import type { Coupon } from '../core/models';
 
 export const COUPON_REPOSITORY = Symbol('COUPON_REPOSITORY');
 

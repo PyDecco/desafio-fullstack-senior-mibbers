@@ -1,4 +1,4 @@
-import type { Cents } from './models/money.model';
+import type { Cents } from './models';
 
 export const MAX_SAFE_CENTS = Number.MAX_SAFE_INTEGER;
 

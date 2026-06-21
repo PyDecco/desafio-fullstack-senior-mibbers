@@ -1,6 +1,5 @@
 import { parseCoupon, InvalidCouponError } from './coupon';
-import { DiscountType } from './models/discount.model';
-import type { Coupon } from './models/coupon.model';
+import { DiscountType, type Coupon } from './models';
 
 const base = (over: Partial<Coupon> = {}): Coupon => ({
   id: 'c1',

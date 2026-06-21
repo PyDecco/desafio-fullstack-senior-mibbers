@@ -1,5 +1,4 @@
-import type { Coupon } from './models/coupon.model';
-import { DiscountType } from './models/discount.model';
+import { DiscountType, type Coupon } from './models';
 import { normalizeCode } from './normalize-code';
 
 export class InvalidCouponError extends Error {}

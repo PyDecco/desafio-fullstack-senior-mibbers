@@ -1,6 +1,4 @@
-import { RejectionCode } from '../../../core/models/rejection.model';
-import type { DiscountType } from '../../../core/models/discount.model';
-import type { ValidationOutcome } from '../../../core/models/validate-coupon.model';
+import { RejectionCode, type DiscountType, type ValidationOutcome } from '../../../core/models';
 
 export type ValidateCouponResponse =
   | {

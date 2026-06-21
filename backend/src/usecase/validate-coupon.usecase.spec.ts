@@ -1,8 +1,5 @@
 import { ValidateCouponUseCase } from './validate-coupon.usecase';
-import { DiscountType } from '../core/models/discount.model';
-import { RejectionCode } from '../core/models/rejection.model';
-import type { Coupon } from '../core/models/coupon.model';
-import type { CartItem } from '../core/models/cart.model';
+import { DiscountType, RejectionCode, type Coupon, type CartItem } from '../core/models';
 import type { CouponRepository } from '../ports/coupon-repository';
 import type { Clock } from '../ports/clock';
 

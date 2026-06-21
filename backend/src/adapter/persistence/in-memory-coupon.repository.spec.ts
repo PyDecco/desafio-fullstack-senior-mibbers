@@ -1,6 +1,5 @@
 import { InMemoryCouponRepository } from './in-memory-coupon.repository';
-import { DiscountType } from '../../core/models/discount.model';
-import type { Coupon } from '../../core/models/coupon.model';
+import { DiscountType, type Coupon } from '../../core/models';
 
 const coupon = (code: string): Coupon => ({
   id: code,
