@@ -1,4 +1,5 @@
 import { applyDecorators, type INestApplication } from '@nestjs/common';
+import type { NextFunction, Request, Response } from 'express';
 import {
   ApiBody,
   ApiExtraModels,
@@ -60,6 +61,14 @@ export function setupSwagger(app: INestApplication): OpenAPIObject | undefined {
   if (process.env.SWAGGER_ENABLED === 'false') {
     return undefined;
   }
+
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    if (req.path === '/docs/') {
+      res.redirect('/docs');
+      return;
+    }
+    next();
+  });
 
   const document = SwaggerModule.createDocument(app, buildOpenApiConfig());
   SwaggerModule.setup('docs', app, document, {
